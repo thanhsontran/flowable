@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+    xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:flowable="http://flowable.org/bpmn"
+    typeLanguage="http://www.w3.org/2001/XMLSchema"
+    expressionLanguage="http://www.w3.org/1999/XPath"
+    targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="genericDoaProcess" name="Quy trình phê duyệt DOA tự động" isExecutable="true">
+        
+        <!-- Sự kiện bắt đầu -->
+        <startEvent id="startEvent" name="Start PR processing" />
+
+        <exclusiveGateway id="check" name="Check Approval Action" />
+
+        <!-- Sự kiện kết thúc THẤT BẠI (REJECT) -->
+        <endEvent id="rejectEndEvent" name="Workflow End (REJECTED)" />
+        <endEvent id="approveEndEvent" name="Workflow End (APPROVED)" />
+
+        <!-- ==================== ĐƯỜNG ĐI (SEQUENCE FLOWS) ==================== -->
+        
+        <!--<sequenceFlow id="flowFromStart" sourceRef="startEvent" targetRef="approveTask" />
+        <sequenceFlow id="flowToActionCheck" sourceRef="approveTask" targetRef="checkActionGateway" />-->
+
+        <!-- NHÁNH TỪ CHỐI: Nếu biến action == 'REJECT' -> Đi thẳng ra ô Kết thúc Từ chối 
+        <sequenceFlow id="flowToReject" name="Bị từ chối" sourceRef="checkActionGateway" targetRef="rejectEndEvent">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'REJECT'}]]></conditionExpression>
+        </sequenceFlow>-->
+
+        <!-- NHÁNH TIẾP TỤC: Nếu biến action != 'REJECT' (hoặc == 'APPROVE') -> Đi sang Cổng kiểm tra cấp tiếp theo 
+        <sequenceFlow id="flowToFinalCheck" name="Được duyệt" sourceRef="checkActionGateway" targetRef="checkFinalStepGateway">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action != 'REJECT'}]]></conditionExpression>
+        </sequenceFlow>-->
+
+        <!-- VÒNG LẶP: Nếu chưa phải cấp cuối -> Quay lại User Task 
+        <sequenceFlow id="flowLoopBack" name="Chưa đủ cấp" sourceRef="checkFinalStepGateway" targetRef="approveTask">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isFinalStep == false}]]></conditionExpression>
+        </sequenceFlow>-->
+
+        <!-- HOÀN THÀNH: Nếu đã là cấp cuối -> Sang ô Kết thúc thành công 
+        <sequenceFlow id="flowToSuccessEnd" name="Đã duyệt đủ" sourceRef="checkFinalStepGateway" targetRef="successEndEvent">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isFinalStep == true}]]></conditionExpression>
+        </sequenceFlow>-->
+
+        <sequenceFlow id="flowToActionCheck" sourceRef="startEvent" targetRef="check" />
+        <sequenceFlow id="flowCheckReject" name="PR is rejected" sourceRef="check" targetRef="rejectEndEvent">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'REJECT'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flowCheckApprove" name="PR is approved" sourceRef="check" targetRef="approveEndEvent">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'APPROVE'}]]></conditionExpression>
+        </sequenceFlow>
+
+    </process>
+</definitions>
