@@ -1,0 +1,55 @@
+doaCheckForApproval
+	currentApprover
+
+checkActionGateway
+	action
+	
+flowToFinalCheck
+	action
+	
+flowToSuccessEnd
+	isFinalStep
+	
+
+		
+In DoaRuleService, implement method
+	- createDoaApprovalSteps(UUID prID, String ruleName, BigDecimal amount)
+		- get all DoaRule with condition: maxAmount <= amount or (maxAmount > amount and minAmount <= amount). Sort maxAmount asc
+		- For each found rules
+			- create DoaApprovalStep with
+				- approvalObjectId = prID
+				- rule = found rule
+				- approvalLevel = 1 (+1 for each loop)
+				- finalStep = false
+		- Update the last DoaApprovalStep, set finalStep = true
+		
+		
+In DoaApprovalStepService, implement method
+	- getNextApprovalStep(UUID prID, Integer currentLevel)
+			- get DoaApprovalStep with condition: approvalObjectId = prID, approvalLevel = currentLevel+1
+			- return found DoaApprovalStep
+
+In PRController.java
+	- Create new PR with 
+		- UUID (should be auto generated)
+		- category with name = Office Supplies
+		- amount = 150000000
+		- requesterId = son.tran
+		- currentApprovalLevel = 0
+		
+	- create Doa Approval Steps for new PR
+		- call DoaRuleService.createDoaApprovalSteps method
+		
+	- prepare variables(key:value) for flowable process
+		- currentStep: PR.currentApprovalLevel
+		- prID: PR.id
+		
+In DoaTaskAssignmentListener.java
+	- Implement existing notify method
+		- get flowable variable
+			UUID prID = delegateTask.getVariable("prID")
+			Integer currentStep= delegateTask.getVariable("currentStep")
+		- Call DoaApprovalStepService.getNextApprovalStep()
+		- if nextStep != null
+			delegateTask.setAssignee("son.tran") // just hard-code for now
+			delegateTask.setVariable("finalStep", nextStep.getFinalStep());
