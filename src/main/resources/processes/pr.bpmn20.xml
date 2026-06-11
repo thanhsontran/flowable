@@ -16,7 +16,15 @@
         <!-- Sự kiện bắt đầu -->
         <startEvent id="startEvent" name="Start PR processing" />
 
-        <exclusiveGateway id="check" name="Check Approval Action" />
+        <!-- User Task Phê duyệt -->
+        <userTask id="doaCheckForApproval" name="" flowable:assignee="${currentApprover}">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${doaTaskAssignmentListener}" />
+            </extensionElements>
+        </userTask>
+
+        <exclusiveGateway id="checkActionGateway" name="Check Approval Action" />
+        <exclusiveGateway id="checkFinalStepGateway" name="Check Final Approval Step" />
 
         <!-- Sự kiện kết thúc THẤT BẠI (REJECT) -->
         <endEvent id="rejectEndEvent" name="Workflow End (REJECTED)" />
@@ -24,36 +32,29 @@
 
         <!-- ==================== ĐƯỜNG ĐI (SEQUENCE FLOWS) ==================== -->
         
-        <!--<sequenceFlow id="flowFromStart" sourceRef="startEvent" targetRef="approveTask" />
-        <sequenceFlow id="flowToActionCheck" sourceRef="approveTask" targetRef="checkActionGateway" />-->
+        <sequenceFlow id="flowFromStart" sourceRef="startEvent" targetRef="doaCheckForApproval" />
+        <sequenceFlow id="flowToActionCheck" sourceRef="doaCheckForApproval" targetRef="checkActionGateway" />
 
-        <!-- NHÁNH TỪ CHỐI: Nếu biến action == 'REJECT' -> Đi thẳng ra ô Kết thúc Từ chối 
-        <sequenceFlow id="flowToReject" name="Bị từ chối" sourceRef="checkActionGateway" targetRef="rejectEndEvent">
+        <!-- NHÁNH TỪ CHỐI: Nếu biến action == 'REJECT' -> Đi thẳng ra ô Kết thúc Từ chối  -->
+        <sequenceFlow id="flowToReject" name="Reject PR" sourceRef="checkActionGateway" targetRef="rejectEndEvent">
             <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'REJECT'}]]></conditionExpression>
-        </sequenceFlow>-->
+        </sequenceFlow>
 
-        <!-- NHÁNH TIẾP TỤC: Nếu biến action != 'REJECT' (hoặc == 'APPROVE') -> Đi sang Cổng kiểm tra cấp tiếp theo 
+        <!-- NHÁNH TIẾP TỤC: Nếu biến action != 'REJECT' (hoặc == 'APPROVE') -> Đi sang Cổng kiểm tra cấp tiếp theo  -->
         <sequenceFlow id="flowToFinalCheck" name="Được duyệt" sourceRef="checkActionGateway" targetRef="checkFinalStepGateway">
             <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action != 'REJECT'}]]></conditionExpression>
-        </sequenceFlow>-->
+        </sequenceFlow>
 
-        <!-- VÒNG LẶP: Nếu chưa phải cấp cuối -> Quay lại User Task 
-        <sequenceFlow id="flowLoopBack" name="Chưa đủ cấp" sourceRef="checkFinalStepGateway" targetRef="approveTask">
+        <!-- VÒNG LẶP: Nếu chưa phải cấp cuối -> Quay lại User Task -->
+        <sequenceFlow id="flowLoopBack" name="Not fully approved" sourceRef="checkFinalStepGateway" targetRef="doaCheckForApproval">
             <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isFinalStep == false}]]></conditionExpression>
-        </sequenceFlow>-->
+        </sequenceFlow>
 
-        <!-- HOÀN THÀNH: Nếu đã là cấp cuối -> Sang ô Kết thúc thành công 
-        <sequenceFlow id="flowToSuccessEnd" name="Đã duyệt đủ" sourceRef="checkFinalStepGateway" targetRef="successEndEvent">
+        <!-- HOÀN THÀNH: Nếu đã là cấp cuối -> Sang ô Kết thúc thành công -->
+        <sequenceFlow id="flowToSuccessEnd" name="All users approved" sourceRef="checkFinalStepGateway" targetRef="approveEndEvent">
             <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isFinalStep == true}]]></conditionExpression>
-        </sequenceFlow>-->
+        </sequenceFlow>
 
-        <sequenceFlow id="flowToActionCheck" sourceRef="startEvent" targetRef="check" />
-        <sequenceFlow id="flowCheckReject" name="PR is rejected" sourceRef="check" targetRef="rejectEndEvent">
-            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'REJECT'}]]></conditionExpression>
-        </sequenceFlow>
-        <sequenceFlow id="flowCheckApprove" name="PR is approved" sourceRef="check" targetRef="approveEndEvent">
-            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${action == 'APPROVE'}]]></conditionExpression>
-        </sequenceFlow>
 
     </process>
 </definitions>
