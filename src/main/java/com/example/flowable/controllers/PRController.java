@@ -1,16 +1,30 @@
 package com.example.flowable.controllers;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.flowable.task.api.Task;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.example.flowable.entities.AppUser;
+import com.example.flowable.entities.DoaCategory;
+import com.example.flowable.entities.PurchaseRequest;
+import com.example.flowable.services.AppUserService;
+import com.example.flowable.services.DoaApprovalStepService;
+import com.example.flowable.services.DoaCategoryService;
 import com.example.flowable.services.DoaRuleService;
+import com.example.flowable.services.PurchaseRequestService;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -18,24 +32,85 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 public class PRController {
 
-    @Autowired
-    private RuntimeService runtimeService;
+    private final RuntimeService runtimeService;
+    private final TaskService taskService;
+    private final DoaRuleService doaRuleService;
+    private final DoaCategoryService doaCategoryService;
+    private final AppUserService appUserService;
+    private final PurchaseRequestService purchaseRequestService;
+    private final DoaApprovalStepService doaApprovalStepService;
 
-    @Autowired
-    private DoaRuleService doaRuleService;
-    
+    public PRController(
+        RuntimeService runtimeService,
+        TaskService taskService,
+        DoaRuleService doaRuleService,
+        DoaCategoryService doaCategoryService,
+        AppUserService appUserService,
+        PurchaseRequestService purchaseRequestService,
+        DoaApprovalStepService doaApprovalStepService
+    ) {
+        this.runtimeService = runtimeService;
+        this.taskService = taskService;
+        this.doaRuleService = doaRuleService;
+        this.doaCategoryService = doaCategoryService;
+        this.appUserService = appUserService;
+        this.purchaseRequestService = purchaseRequestService;
+        this.doaApprovalStepService = doaApprovalStepService;
+    }
 
     @GetMapping("/createPR")
     public String createPR() {
-        // TODO: create purchase request here
-        
-        // TODO: Set flowable process variables here
-        Map<String, Object> variables = new HashMap<>();
+        DoaCategory category = doaCategoryService.findByName("Office Supplies")
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DOA category not found"));
+        AppUser requester = appUserService.findByUsername("son.tran")
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Requester not found"));
 
-        //Start flowable process
-        ProcessInstance process = runtimeService.startProcessInstanceByKey("genericDoaProcess",variables);
-        //get flowable process instance id
+        PurchaseRequest purchaseRequest = purchaseRequestService.createPurchaseRequest(
+            category,
+            requester,
+            new BigDecimal("150000000")
+        );
+
+        doaRuleService.createDoaApprovalSteps(purchaseRequest.getId(), category.getName(), purchaseRequest.getAmount());
+        if (doaApprovalStepService.getNextApprovalStep(purchaseRequest.getId(), purchaseRequest.getCurrentApprovalLevel()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No DOA approval steps found for purchase request");
+        }
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("currentStep", purchaseRequest.getCurrentApprovalLevel());
+        variables.put("prID", purchaseRequest.getId());
+        variables.put("isFinalStep", Boolean.FALSE);
+
+        ProcessInstance process = runtimeService.startProcessInstanceByKey("genericDoaProcess", variables);
         String id = process.getId();
-        return "Purchase Request Created - Start Flowable Process : " + id + "   with size of doa rules: " + doaRuleService.findAll().size();
+        return "Purchase Request Created - Start Flowable Process : " + id + " for PR " + purchaseRequest.getId();
+    }
+
+    @PostMapping("/tasks/{taskId}/complete")
+    public String completeTask(@PathVariable String taskId, @RequestParam String action) {
+        Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        if (task == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found: " + taskId);
+        }
+
+        UUID prId = (UUID) taskService.getVariable(taskId, "prID");
+        Integer currentStep = (Integer) taskService.getVariable(taskId, "currentStep");
+        Boolean finalStep = (Boolean) taskService.getVariable(taskId, "isFinalStep");
+
+        if (prId == null || currentStep == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task is missing workflow variables");
+        }
+
+        boolean isFinalStep = Boolean.TRUE.equals(finalStep);
+        PurchaseRequest purchaseRequest = purchaseRequestService.updateForApprovalAction(prId, currentStep + 1, action, isFinalStep);
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("action", action.toUpperCase());
+        if (!"REJECT".equalsIgnoreCase(action) && !isFinalStep) {
+            variables.put("currentStep", purchaseRequest.getCurrentApprovalLevel());
+        }
+
+        taskService.complete(taskId, variables);
+        return "Task " + taskId + " completed with action " + action.toUpperCase() + " for PR " + prId;
     }
 }

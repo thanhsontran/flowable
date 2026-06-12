@@ -34,6 +34,9 @@ public class PurchaseRequest {
     @Column(name = "current_approval_level", nullable = false)
     private Integer currentApprovalLevel;
 
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
+
     public UUID getId() {
         return id;
     }
@@ -80,5 +83,13 @@ public class PurchaseRequest {
 
     public void setCurrentApprovalLevel(Integer currentApprovalLevel) {
         this.currentApprovalLevel = currentApprovalLevel;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

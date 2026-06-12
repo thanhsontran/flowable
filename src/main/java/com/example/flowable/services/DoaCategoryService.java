@@ -1,5 +1,6 @@
 package com.example.flowable.services;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -10,8 +11,11 @@ import com.example.flowable.repositories.DoaCategoryRepository;
 @Service
 public class DoaCategoryService extends CrudService<DoaCategory> {
 
+    private final DoaCategoryRepository repository;
+
     public DoaCategoryService(DoaCategoryRepository repository) {
         super(repository);
+        this.repository = repository;
     }
 
     @Override
@@ -22,5 +26,9 @@ public class DoaCategoryService extends CrudService<DoaCategory> {
     @Override
     protected void setId(DoaCategory entity, UUID id) {
         entity.setId(id);
+    }
+
+    public Optional<DoaCategory> findByName(String name) {
+        return repository.findByName(name);
     }
 }

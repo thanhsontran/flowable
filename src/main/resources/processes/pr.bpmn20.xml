@@ -17,7 +17,7 @@
         <startEvent id="startEvent" name="Start PR processing" />
 
         <!-- User Task Phê duyệt -->
-        <userTask id="doaCheckForApproval" name="" flowable:assignee="${currentApprover}">
+        <userTask id="doaCheckForApproval" name="">
             <extensionElements>
                 <flowable:taskListener event="create" delegateExpression="${doaTaskAssignmentListener}" />
             </extensionElements>

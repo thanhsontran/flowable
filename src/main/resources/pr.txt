@@ -1,16 +1,3 @@
-doaCheckForApproval
-	currentApprover
-
-checkActionGateway
-	action
-	
-flowToFinalCheck
-	action
-	
-flowToSuccessEnd
-	isFinalStep
-	
-
 		
 In DoaRuleService, implement method
 	- createDoaApprovalSteps(UUID prID, String ruleName, BigDecimal amount)
@@ -51,5 +38,6 @@ In DoaTaskAssignmentListener.java
 			Integer currentStep= delegateTask.getVariable("currentStep")
 		- Call DoaApprovalStepService.getNextApprovalStep()
 		- if nextStep != null
-			delegateTask.setAssignee("son.tran") // just hard-code for now
+			find user with role = nextStep.rule.role
+			delegateTask.setAssignee(user.username) 
 			delegateTask.setVariable("finalStep", nextStep.getFinalStep());

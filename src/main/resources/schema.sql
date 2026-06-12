@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS PR (
     requester_id UUID,
     category_id UUID,
     current_approval_level SMALLINT,
+    status VARCHAR(20) NOT NULL,
     CONSTRAINT fk_pr_category FOREIGN KEY (category_id) REFERENCES doa_categories(id)
 );
 
