@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.flowable.entities.AppUser;
+import com.example.flowable.entities.DoaApprovalStep;
 import com.example.flowable.entities.DoaCategory;
 import com.example.flowable.entities.PurchaseRequest;
 import com.example.flowable.repositories.PurchaseRequestRepository;
@@ -35,7 +36,6 @@ public class PurchaseRequestService extends CrudService<PurchaseRequest> {
         purchaseRequest.setRequesterId(requester.getId());
         purchaseRequest.setAmount(amount);
         purchaseRequest.setCurrency("VND");
-        purchaseRequest.setCurrentApprovalLevel(0);
         purchaseRequest.setStatus("PENDING");
         return create(purchaseRequest);
     }
@@ -45,14 +45,19 @@ public class PurchaseRequestService extends CrudService<PurchaseRequest> {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Purchase request not found: " + id));
     }
 
-    public PurchaseRequest updateForApprovalAction(UUID prId, Integer currentStep, String action, boolean finalStep) {
+    public PurchaseRequest updateForApprovalAction(UUID prId, String action, boolean finalStep) {
         PurchaseRequest purchaseRequest = requireById(prId);
         if ("REJECT".equalsIgnoreCase(action)) {
             purchaseRequest.setStatus("REJECTED");
         } else if ("APPROVE".equalsIgnoreCase(action)) {
-            purchaseRequest.setCurrentApprovalLevel(currentStep);
             purchaseRequest.setStatus(finalStep ? "APPROVED" : "IN_APPROVAL");
         }
         return update(prId, purchaseRequest);
     }
+	
+	public void updateApprovalStep(UUID prId, DoaApprovalStep currentStep) {
+		PurchaseRequest purchaseRequest = requireById(prId);
+		purchaseRequest.setCurrentApprovalStep(currentStep);
+		update(prId, purchaseRequest);
+	}
 }

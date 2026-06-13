@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.example.flowable.entities.DoaApprovalStep;
+import com.example.flowable.entities.AppUser;
 import com.example.flowable.entities.DoaRule;
 import com.example.flowable.repositories.DoaRuleRepository;
 
@@ -17,11 +18,13 @@ public class DoaRuleService extends CrudService<DoaRule> {
 
     private final DoaRuleRepository repository;
     private final DoaApprovalStepService doaApprovalStepService;
+	private final AppUserService appUserService;
 
-    public DoaRuleService(DoaRuleRepository repository, DoaApprovalStepService doaApprovalStepService) {
+    public DoaRuleService(DoaRuleRepository repository, DoaApprovalStepService doaApprovalStepService, AppUserService appUserService) {
         super(repository);
         this.repository = repository;
         this.doaApprovalStepService = doaApprovalStepService;
+		this.appUserService = appUserService;
     }
 
     @Override
@@ -42,20 +45,25 @@ public class DoaRuleService extends CrudService<DoaRule> {
 
         List<DoaApprovalStep> createdSteps = new ArrayList<>();
         int approvalLevel = 1;
-        for (DoaRule matchedRule : matchedRules) {
+        for (int i = 0; i < matchedRules.size(); i++) {
+			DoaRule matchedRule = matchedRules.get(i);
             DoaApprovalStep step = new DoaApprovalStep();
             step.setApprovalObjectId(prId);
             step.setRule(matchedRule);
             step.setApprovalLevel(approvalLevel++);
-            step.setFinalStep(Boolean.FALSE);
-            createdSteps.add(doaApprovalStepService.create(step));
-        }
+			step.setFinalStep(Boolean.FALSE);
+			
+			if(i == matchedRules.size()-1) {
+				step.setFinalStep(Boolean.TRUE);
+			}
 
-        if (!createdSteps.isEmpty()) {
-            DoaApprovalStep lastStep = createdSteps.get(createdSteps.size() - 1);
-            lastStep.setFinalStep(Boolean.TRUE);
-            createdSteps.set(createdSteps.size() - 1,
-                doaApprovalStepService.update(lastStep.getId(), lastStep));
+			String approverUserName = appUserService.findFirstByRoleId(matchedRule.getApproverRoleId())
+				.map(AppUser::getUsername)
+				.orElseThrow(() -> new RuntimeException(
+					"No user found for approver role: " + matchedRule.getApproverRoleId()));
+			step.setApproverUserName(approverUserName);
+            
+            createdSteps.add(doaApprovalStepService.create(step));
         }
 
         return createdSteps;
@@ -63,15 +71,6 @@ public class DoaRuleService extends CrudService<DoaRule> {
 
     private boolean matchesAmount(DoaRule rule, BigDecimal amount) {
         BigDecimal minAmount = rule.getMinAmount() == null ? BigDecimal.ZERO : rule.getMinAmount();
-        BigDecimal maxAmount = rule.getMaxAmount();
-
-        boolean minMatches = minAmount.compareTo(amount) <= 0;
-        boolean maxMatches = maxAmount == null || maxAmount.compareTo(amount) <= 0 || maxAmount.compareTo(amount) > 0;
-
-        if (maxAmount == null) {
-            return minMatches;
-        }
-
-        return (maxAmount.compareTo(amount) <= 0 || maxAmount.compareTo(amount) > 0) && minMatches;
+        return minAmount.compareTo(amount) <= 0;
     }
 }

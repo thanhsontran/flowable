@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.flowable.entities.AppUser;
+import com.example.flowable.entities.DoaApprovalStep;
 import com.example.flowable.entities.DoaCategory;
 import com.example.flowable.entities.PurchaseRequest;
 import com.example.flowable.services.AppUserService;
@@ -72,12 +73,14 @@ public class PRController {
         );
 
         doaRuleService.createDoaApprovalSteps(purchaseRequest.getId(), category.getName(), purchaseRequest.getAmount());
-        if (doaApprovalStepService.getNextApprovalStep(purchaseRequest.getId(), purchaseRequest.getCurrentApprovalLevel()).isEmpty()) {
+        
+        int currentLevel = 0;
+		if (doaApprovalStepService.getNextApprovalStep(purchaseRequest.getId(), currentLevel).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No DOA approval steps found for purchase request");
         }
 
         Map<String, Object> variables = new HashMap<>();
-        variables.put("currentStep", purchaseRequest.getCurrentApprovalLevel());
+        variables.put("currentStep", currentLevel);
         variables.put("prID", purchaseRequest.getId());
         variables.put("isFinalStep", Boolean.FALSE);
 
@@ -85,7 +88,13 @@ public class PRController {
         String id = process.getId();
         return "Purchase Request Created - Start Flowable Process : " + id + " for PR " + purchaseRequest.getId();
     }
+	
+	@GetMapping("show/{prID}")
+	public Object getPR(@PathVariable String prID) {
+		return purchaseRequestService.requireById(UUID.fromString(prID));
+	}
 
+		
     @PostMapping("/tasks/{taskId}/complete")
     public String completeTask(@PathVariable String taskId, @RequestParam String action) {
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
@@ -102,15 +111,19 @@ public class PRController {
         }
 
         boolean isFinalStep = Boolean.TRUE.equals(finalStep);
-        PurchaseRequest purchaseRequest = purchaseRequestService.updateForApprovalAction(prId, currentStep + 1, action, isFinalStep);
-
+		PurchaseRequest purchaseRequest = purchaseRequestService.requireById(prId);
+		DoaApprovalStep currentApprovalStep = purchaseRequest.getCurrentApprovalStep();
+		currentApprovalStep.setAction(action);
+		
+		purchaseRequestService.updateForApprovalAction(prId, action, isFinalStep);
+		
         Map<String, Object> variables = new HashMap<>();
         variables.put("action", action.toUpperCase());
-        if (!"REJECT".equalsIgnoreCase(action) && !isFinalStep) {
-            variables.put("currentStep", purchaseRequest.getCurrentApprovalLevel());
-        }
 
         taskService.complete(taskId, variables);
+		doaApprovalStepService.update(currentApprovalStep.getId(), currentApprovalStep);
         return "Task " + taskId + " completed with action " + action.toUpperCase() + " for PR " + prId;
     }
+	
+	
 }

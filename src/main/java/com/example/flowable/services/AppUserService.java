@@ -35,4 +35,8 @@ public class AppUserService extends CrudService<AppUser> {
     public Optional<AppUser> findFirstByRoleId(UUID roleId) {
         return repository.findFirstByRole_Id(roleId);
     }
+
+    public Optional<String> getUsernameById(UUID id) {
+        return repository.findById(id).map(AppUser::getUsername);
+    }
 }

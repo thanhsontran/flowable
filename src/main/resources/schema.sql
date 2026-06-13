@@ -20,17 +20,6 @@ CREATE TABLE IF NOT EXISTS doa_categories (
     description VARCHAR(100)
 );
 
-CREATE TABLE IF NOT EXISTS PR (
-    id UUID PRIMARY KEY,
-    amount DECIMAL(18, 2) NOT NULL,
-    currency VARCHAR(3) DEFAULT 'VND',
-    requester_id UUID,
-    category_id UUID,
-    current_approval_level SMALLINT,
-    status VARCHAR(20) NOT NULL,
-    CONSTRAINT fk_pr_category FOREIGN KEY (category_id) REFERENCES doa_categories(id)
-);
-
 CREATE TABLE IF NOT EXISTS doa_rules (
     id UUID PRIMARY KEY,
     category_id UUID,
@@ -48,6 +37,21 @@ CREATE TABLE IF NOT EXISTS doa_approval_steps (
     approval_object_id UUID NOT NULL,
     rule_id UUID,
     approval_level SMALLINT NOT NULL,
+    approver_username VARCHAR(50) NOT NULL,
     is_final_step BOOLEAN DEFAULT FALSE,
+    step_action VARCHAR(20),
     CONSTRAINT fk_approval_steps_rule FOREIGN KEY (rule_id) REFERENCES doa_rules(id)
 );
+
+CREATE TABLE IF NOT EXISTS PR (
+    id UUID PRIMARY KEY,
+    amount DECIMAL(18, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'VND',
+    requester_id UUID,
+    category_id UUID,
+    current_approval_step_id UUID,
+    status VARCHAR(20) NOT NULL,
+    CONSTRAINT fk_pr_category FOREIGN KEY (category_id) REFERENCES doa_categories(id),
+    CONSTRAINT fk_pr_current_approval_step FOREIGN KEY (current_approval_step_id) REFERENCES doa_approval_steps(id)
+);
+

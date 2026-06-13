@@ -31,8 +31,9 @@ public class PurchaseRequest {
     @JoinColumn(name = "category_id")
     private DoaCategory category;
 
-    @Column(name = "current_approval_level", nullable = false)
-    private Integer currentApprovalLevel;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_approval_step_id")
+    private DoaApprovalStep currentApprovalStep;
 
     @Column(name = "status", nullable = false, length = 20)
     private String status;
@@ -77,12 +78,12 @@ public class PurchaseRequest {
         this.category = category;
     }
 
-    public Integer getCurrentApprovalLevel() {
-        return currentApprovalLevel;
+    public DoaApprovalStep getCurrentApprovalStep() {
+        return currentApprovalStep;
     }
 
-    public void setCurrentApprovalLevel(Integer currentApprovalLevel) {
-        this.currentApprovalLevel = currentApprovalLevel;
+    public void setCurrentApprovalStep(DoaApprovalStep currentApprovalStep) {
+        this.currentApprovalStep = currentApprovalStep;
     }
 
     public String getStatus() {

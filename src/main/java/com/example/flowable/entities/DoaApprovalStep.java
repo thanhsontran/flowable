@@ -9,7 +9,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "doa_approval_steps")
 public class DoaApprovalStep {
@@ -29,45 +33,11 @@ public class DoaApprovalStep {
 
     @Column(name = "is_final_step")
     private Boolean finalStep;
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getApprovalObjectId() {
-        return approvalObjectId;
-    }
-
-    public void setApprovalObjectId(UUID approvalObjectId) {
-        this.approvalObjectId = approvalObjectId;
-    }
-
-    public DoaRule getRule() {
-        return rule;
-    }
-
-    public void setRule(DoaRule rule) {
-        this.rule = rule;
-    }
-
-    public Integer getApprovalLevel() {
-        return approvalLevel;
-    }
-
-    public void setApprovalLevel(Integer approvalLevel) {
-        this.approvalLevel = approvalLevel;
-    }
-
-    public Boolean getFinalStep() {
-        return finalStep;
-    }
-
-    public void setFinalStep(Boolean finalStep) {
-        this.finalStep = finalStep;
-    }
+	
+	@Column(name = "approver_username", length = 50, nullable = false)
+	private String approverUserName;
+	
+	@Column(name = "step_action", length = 20)
+	private String action;
 
 }
